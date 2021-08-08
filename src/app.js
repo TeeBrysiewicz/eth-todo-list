@@ -2,6 +2,30 @@ App = {
   loading: false,
   contracts: {},
 
+  // This connect function may not be needed...
+  connect: async () => {
+    await ethereum
+      .request({ method: 'eth_requestAccounts' })
+      .catch((err) => {
+        if (err.code === 4001) {
+          // If this happens, the user rejected to connection request.
+          console.log('Please connect to MetaMask')
+        } else {
+          console.error(err);
+        }
+      })
+  },
+
+  // This too...
+  // handleAccountsChanged: async (accounts) => {
+  //   if (accounts.length === 0) {
+  //     // MetaMask is locked or the user has not connected any accounts
+  //     console.log('Please connect to MetaMask.')
+  //   } else if (accounts[0] !== currentAccount) {
+  //     App.account = accounts[0]
+  //   }
+  // },
+
   load: async () => {
     await App.loadWeb3()
     await App.loadAccount()
@@ -9,24 +33,39 @@ App = {
     await App.render()
   },
 
+  updateAccount: async (accounts) => {
+    console.log('Account Found: ', accounts[0])
+    App.account = accounts[0]
+    // ethereum.defaultAccount = accounts[0]
+    ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [
+        {
+          from: accounts[0],
+          to: accounts[0],
+          value: '',
+          gasPrice: '',
+          gas: '',
+        },
+      ],
+    })
+    .catch((error) => console.error)
+  },
+
   loadWeb3: async () => {
     const provider = await detectEthereumProvider()
     console.log(provider)
+
     if (provider) {
-
       console.log('Ethereum successfully detected!')
-
       App.provider = provider
-
-      // From now on, this should always be true:
-      // provider === window.ethereum
-
-      // Access the decentralized web!
 
       // Legacy providers may only have ethereum.sendAsync
       const chainId = await provider.request({
         method: 'eth_chainId'
       })
+
+      // Access the decentralized web!
     } else {
 
       // if the provider is not detected, detectEthereumProvider resolves to null
@@ -37,7 +76,34 @@ App = {
   loadAccount: async () => {
     const accounts = await ethereum.request({ method: 'eth_accounts' })
     App.account = accounts[0]
-    console.log(App.account)
+    console.log("Account Loaded: ", App.account)
+
+    // await ethereum
+    //   .request({ method: 'eth_requestAccounts' })
+    //   .then(App.updateAccount)
+    //   .catch((err) => {
+    //     if (err.code === 4001) {
+    //       // If this happens, the user rejected to connection request.
+    //       console.log('Please connect to MetaMask')
+    //     } else {
+    //       console.error(err);
+    //     }
+    //   })
+
+    // await ethereum.request({
+    //   method: 'eth_sendTransaction',
+    //   params: [
+    //     {
+    //       nonce: '0x00',
+    //       gasPrice: '',
+    //       gas: '',
+    //       to: accounts[0],
+    //       from: accounts[0],
+    //       value: '0x00',
+    //     },
+    //   ],
+    // })
+    // .catch((error) => console.error)
   },
 
   loadContract: async () => {
@@ -99,6 +165,32 @@ App = {
       // Show the task
       $newTaskTemplate.show()
     }
+  },
+
+  processTask: async () => {
+    await ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [
+        {
+          nonce: '0x00',
+          gasPrice: '',
+          gas: '',
+          to: App.account,
+          from: App.account,
+          value: '0x00',
+        },
+      ],
+    })
+    .catch((error) => console.error)
+  },
+
+  createTask: async () => {
+    App.setLoading(true)
+    const content = $('#newTask').val()
+    // await App.processTask()
+    debugger;
+    await App.todoList.createTask(content)
+    window.location.reload()
   },
 
   setLoading: (boolean) => {
